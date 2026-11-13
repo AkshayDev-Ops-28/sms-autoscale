@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: locust
+  labels: {app: locust}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: locust}
+  template:
+    metadata:
+      labels: {app: locust}
+    spec:
+      containers:
+      - name: locust
+        image: locustio/locust:latest
+        args: ["-f", "/mnt/locust/locustfile.py", "--host", "http://sms-spam"]
+        env:
+        - {name: CORPUS, value: /mnt/locust/sms_sample.txt}
+        - {name: WAVE_PERIOD, value: "150"}
+        - {name: WAVE_CYCLES, value: "3"}
+        - {name: BASE_USERS, value: "5"}
+        - {name: PEAK_USERS, value: "40"}
+        ports: [{containerPort: 8089}]
+        resources:
+          requests: {cpu: 200m, memory: 128Mi}
+        volumeMounts: [{name: files, mountPath: /mnt/locust}]
+      volumes:
+      - name: files
+        configMap: {name: locust-files}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: locust
+spec:
+  selector: {app: locust}
+  ports:
+  - {port: 8089, targetPort: 8089}

@@ -1,0 +1,21 @@
+# Baseline: scale on the LIVE request rate only.
+# desired replicas = ceil(rps / threshold); threshold = sustainable rps per pod (calibrate it!)
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: sms-spam-scaler
+spec:
+  scaleTargetRef: {name: sms-spam}
+  minReplicaCount: 1
+  maxReplicaCount: 5
+  pollingInterval: 5
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown: {stabilizationWindowSeconds: 60}
+  triggers:
+  - type: prometheus
+    metadata:
+      serverAddress: http://prom-prometheus.monitoring.svc:9090
+      query: sum(rate(sms_requests_total[20s]))
+      threshold: "4"

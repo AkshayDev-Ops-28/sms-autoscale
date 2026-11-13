@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sms-spam
+  labels: {app: sms-spam}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: sms-spam}
+  template:
+    metadata:
+      labels: {app: sms-spam}
+    spec:
+      containers:
+      - name: sms-spam
+        image: sms-spam:v1
+        imagePullPolicy: Never          # image is built inside minikube's Docker
+        ports: [{containerPort: 8000, name: http}]
+        env:
+        - {name: TORCH_THREADS, value: "1"}
+        resources:
+          requests: {cpu: 500m, memory: 600Mi}
+          limits: {cpu: "1", memory: 1Gi}
+        startupProbe:
+          httpGet: {path: /healthz, port: http}
+          periodSeconds: 2
+          failureThreshold: 60
+        readinessProbe:
+          httpGet: {path: /healthz, port: http}
+          periodSeconds: 2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sms-spam
+  labels: {app: sms-spam}
+spec:
+  selector: {app: sms-spam}
+  ports:
+  - {name: http, port: 80, targetPort: http}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: sms-spam
+spec:
+  selector:
+    matchLabels: {app: sms-spam}
+  endpoints:
+  - {port: http, path: /metrics, interval: 5s}

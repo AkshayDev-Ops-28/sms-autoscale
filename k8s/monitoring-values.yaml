@@ -1,0 +1,22 @@
+# kube-prometheus-stack values (release name: prom, namespace: monitoring)
+fullnameOverride: prom            # -> Prometheus service is prom-prometheus
+alertmanager: {enabled: false}
+nodeExporter: {enabled: false}
+kubeEtcd: {enabled: false}
+kubeScheduler: {enabled: false}
+kubeControllerManager: {enabled: false}
+kubeProxy: {enabled: false}
+prometheus:
+  prometheusSpec:
+    serviceMonitorSelectorNilUsesHelmValues: false   # pick up ServiceMonitors from any namespace
+    podMonitorSelectorNilUsesHelmValues: false
+    scrapeInterval: 5s
+    retention: 6h
+    resources:
+      requests: {memory: 400Mi}
+grafana:
+  fullnameOverride: grafana
+  adminPassword: admin
+  defaultDashboardsEnabled: true
+  sidecar:
+    dashboards: {enabled: true, label: grafana_dashboard}

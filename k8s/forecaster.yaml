@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sms-forecaster
+  labels: {app: sms-forecaster}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: sms-forecaster}
+  template:
+    metadata:
+      labels: {app: sms-forecaster}
+    spec:
+      containers:
+      - name: forecaster
+        image: sms-forecaster:v1
+        imagePullPolicy: Never
+        ports: [{containerPort: 8000, name: metrics}]
+        env:
+        - {name: PROM_URL, value: "http://prom-prometheus.monitoring.svc:9090"}
+        - {name: HORIZON_S, value: "45"}
+        - {name: SEASON_S, value: "150"}   # keep equal to WAVE_PERIOD
+        resources:
+          requests: {cpu: 50m, memory: 64Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sms-forecaster
+  labels: {app: sms-forecaster}
+spec:
+  selector: {app: sms-forecaster}
+  ports:
+  - {name: metrics, port: 8000, targetPort: metrics}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: sms-forecaster
+spec:
+  selector:
+    matchLabels: {app: sms-forecaster}
+  endpoints:
+  - {port: metrics, interval: 5s}
