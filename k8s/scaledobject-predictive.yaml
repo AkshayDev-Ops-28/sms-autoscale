@@ -1,6 +1,10 @@
 # Predictive: same live trigger as the baseline PLUS the forecast trigger.
 # KEDA/HPA follows whichever trigger asks for more replicas, so the forecast can only
 # scale up EARLY; the live trigger remains the safety net. Everything else identical to reactive.
+#
+# threshold = 6 req/s per pod and maxReplicaCount = 3 come from the calibrated model
+# (scripts/estimator.py) and MUST match scaledobject-reactive.yaml, so the only difference
+# between the two modes is when the scaling decision gets its information.
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
@@ -8,7 +12,7 @@ metadata:
 spec:
   scaleTargetRef: {name: sms-spam}
   minReplicaCount: 1
-  maxReplicaCount: 5
+  maxReplicaCount: 3
   pollingInterval: 5
   advanced:
     horizontalPodAutoscalerConfig:
@@ -19,9 +23,9 @@ spec:
     metadata:
       serverAddress: http://prom-prometheus.monitoring.svc:9090
       query: sum(rate(sms_requests_total[20s]))
-      threshold: "4"
+      threshold: "6"
   - type: prometheus
     metadata:
       serverAddress: http://prom-prometheus.monitoring.svc:9090
       query: max(predicted_rps)
-      threshold: "4"
+      threshold: "6"

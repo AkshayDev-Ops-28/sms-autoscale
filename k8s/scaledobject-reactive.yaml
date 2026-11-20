@@ -1,5 +1,12 @@
 # Baseline: scale on the LIVE request rate only.
-# desired replicas = ceil(rps / threshold); threshold = sustainable rps per pod (calibrate it!)
+# desired replicas = ceil(rps / threshold)
+#
+# threshold = 6 req/s per pod, derived from the calibrated model (scripts/estimator.py):
+#   S = 52 ms x (1 + 2.2 n) x (1 + 0.25 k), p95 = 1.6 x mean, deadline 1000 ms
+#   worst case over 1..3 pods (k = pods-1 busy neighbours): 8.7 / 7.3 / 6.1 req/s per pod
+#   (after 10% headroom) -> 6 never under-provisions anywhere in the supported range.
+# maxReplicaCount = 3: with 4 busy pods on the 4-core node, latency rose 3.6x-5x (4 of 4 runs).
+# The predictive ScaledObject must use the SAME threshold and max so only the input differs.
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
@@ -7,7 +14,7 @@ metadata:
 spec:
   scaleTargetRef: {name: sms-spam}
   minReplicaCount: 1
-  maxReplicaCount: 5
+  maxReplicaCount: 3
   pollingInterval: 5
   advanced:
     horizontalPodAutoscalerConfig:
@@ -18,4 +25,4 @@ spec:
     metadata:
       serverAddress: http://prom-prometheus.monitoring.svc:9090
       query: sum(rate(sms_requests_total[20s]))
-      threshold: "4"
+      threshold: "6"

@@ -3,6 +3,11 @@
 Each simulated user sends ~2 req/s, so RPS ~= 2 x users.
 Every request carries a deadline header (30% urgent=250 ms, 70% normal=1000 ms);
 Locust counts a response slower than its deadline as a failure => failure % = deadline-miss %.
+
+Wave sizing comes from the calibrated model (scripts/estimator.py): 3 pods serve about
+18 req/s within the 1000 ms deadline, and the threshold is 6 req/s per pod. So
+BASE_USERS=2 (~4 req/s -> 1 pod) and PEAK_USERS=9 (~18 req/s -> 3 pods), which makes the
+scaling 1 -> 3 -> 1 visible on every cycle.
 """
 import math
 import os
@@ -46,8 +51,8 @@ class Wave(LoadTestShape):
 
     period = int(os.getenv("WAVE_PERIOD", "150"))
     cycles = int(os.getenv("WAVE_CYCLES", "3"))
-    base = int(os.getenv("BASE_USERS", "5"))
-    peak = int(os.getenv("PEAK_USERS", "40"))
+    base = int(os.getenv("BASE_USERS", "2"))
+    peak = int(os.getenv("PEAK_USERS", "9"))
 
     def tick(self):
         t = self.get_run_time()
