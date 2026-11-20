@@ -21,7 +21,7 @@ LIVE_RATE = "sum(rate(sms_requests_total[20s]))"
 PRED_P95 = (
     f"{P95_RATIO}*{S0_S}"
     f"*(1+{RR}*clamp_min(avg(avg_over_time(sms_inflight_requests[20s]))-1,0))"
-    f"*(1+{BETA}*clamp_min(scalar({READY})-1,0))"
+    f"*(1+{BETA}*clamp_min(max({READY})-1,0))"
 )
 OBS_P95 = "histogram_quantile(0.95, sum by (le) (rate(sms_request_seconds_bucket[30s])))"
 
@@ -44,7 +44,7 @@ panels = [
     ], "short", 0, 0, desc=f"Model need = ceil(rate / {THRESHOLD} req/s per pod), capped at {MAX_PODS}"),
     panel(2, "Traffic: actual vs forecast (aligned to the time it predicts)", [
         (LIVE_RATE, "actual req/s"),
-        ("max(predicted_rps) offset 45s", "forecast made 45s earlier"),
+        ("max(predicted_rps offset 45s)", "forecast made 45s earlier"),
         ("max(predicted_rps)", "forecast for t+45s (live)"),
     ], "reqps", 12, 0, desc="Offset must equal HORIZON_S in k8s/forecaster.yaml"),
     panel(3, "CPU per pod (cores)", [
