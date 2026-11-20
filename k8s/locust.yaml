@@ -1,31 +1,39 @@
-# Predictive: same live trigger as the baseline PLUS the forecast trigger.
-# KEDA/HPA follows whichever trigger asks for more replicas, so the forecast can only
-# scale up EARLY; the live trigger remains the safety net. Everything else identical to reactive.
-#
-# threshold = 6 req/s per pod and maxReplicaCount = 3 come from the calibrated model
-# (scripts/estimator.py) and MUST match scaledobject-reactive.yaml, so the only difference
-# between the two modes is when the scaling decision gets its information.
-apiVersion: keda.sh/v1alpha1
-kind: ScaledObject
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  name: sms-spam-scaler
+  name: locust
+  labels: {app: locust}
 spec:
-  scaleTargetRef: {name: sms-spam}
-  minReplicaCount: 1
-  maxReplicaCount: 3
-  pollingInterval: 5
-  advanced:
-    horizontalPodAutoscalerConfig:
-      behavior:
-        scaleDown: {stabilizationWindowSeconds: 60}
-  triggers:
-  - type: prometheus
+  replicas: 1
+  selector:
+    matchLabels: {app: locust}
+  template:
     metadata:
-      serverAddress: http://prom-prometheus.monitoring.svc:9090
-      query: sum(rate(sms_requests_total[20s]))
-      threshold: "6"
-  - type: prometheus
-    metadata:
-      serverAddress: http://prom-prometheus.monitoring.svc:9090
-      query: max(predicted_rps)
-      threshold: "6"
+      labels: {app: locust}
+    spec:
+      containers:
+      - name: locust
+        image: locustio/locust:latest
+        args: ["-f", "/mnt/locust/locustfile.py", "--host", "http://sms-spam"]
+        env:
+        - {name: CORPUS, value: /mnt/locust/sms_sample.txt}
+        - {name: WAVE_PERIOD, value: "150"}
+        - {name: WAVE_CYCLES, value: "3"}
+        - {name: BASE_USERS, value: "4"}
+        - {name: PEAK_USERS, value: "9"}
+        ports: [{containerPort: 8089}]
+        resources:
+          requests: {cpu: 200m, memory: 128Mi}
+        volumeMounts: [{name: files, mountPath: /mnt/locust}]
+      volumes:
+      - name: files
+        configMap: {name: locust-files}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: locust
+spec:
+  selector: {app: locust}
+  ports:
+  - {port: 8089, targetPort: 8089}
