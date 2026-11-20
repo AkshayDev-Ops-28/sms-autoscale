@@ -19,7 +19,7 @@ spec:
         - {name: CORPUS, value: /mnt/locust/sms_sample.txt}
         - {name: WAVE_PERIOD, value: "150"}
         - {name: WAVE_CYCLES, value: "3"}
-        - {name: BASE_USERS, value: "4"}
+        - {name: BASE_USERS, value: "2"}
         - {name: PEAK_USERS, value: "9"}
         ports: [{containerPort: 8089}]
         resources:
